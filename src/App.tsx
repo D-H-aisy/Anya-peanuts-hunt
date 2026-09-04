@@ -9,7 +9,7 @@ type Obstacle = { minX: number; maxX: number; minZ: number; maxZ: number };
 type TouchInput = Vec2;
 type AnyaMood = 'normal' | 'happy' | 'sad' | 'crying';
 
-const FLOOR_LEVEL = -1;
+const FLOOR_LEVEL = -2;
 const FLOOR_THICKNESS = .12;
 const ANYA_SPRITE_FOOT_INSET = (0.4) ;
 
