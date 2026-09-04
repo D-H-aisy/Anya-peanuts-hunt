@@ -11,7 +11,7 @@ type AnyaMood = 'normal' | 'happy' | 'sad' | 'crying';
 
 const FLOOR_LEVEL = 0;
 const FLOOR_THICKNESS = .12;
-const ANYA_SPRITE_FOOT_INSET = (240/ 240) * 1.86;
+const ANYA_SPRITE_FOOT_INSET = (240/ 240) ;
 
 enum Controls {
   forward = 'forward',
