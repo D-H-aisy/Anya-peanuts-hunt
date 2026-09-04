@@ -440,7 +440,7 @@ function App() {
   const total = peanutSpots.length;
   const wakuAudio = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
-    const audio = new Audio(`${import.meta.env.BASE_URL}assets/anya-waku-waku.mp3`);
+    const audio = new Audio(`${import.meta.env.BASE_URL}anya-waku-waku.mp3`);
     audio.preload = 'auto';
     wakuAudio.current = audio;
     const unlockAudio = () => {
