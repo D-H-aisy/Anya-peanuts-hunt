@@ -311,11 +311,12 @@ function AnyaCharacter({ positionRef, crawling, mood }: { positionRef: MutableRe
     if (fallbackBody.current) fallbackBody.current.visible = !texture.image;
   });
   return <group ref={group}>
-    <mesh position={[0, FLOOR_LEVEL + .008, 0]} scale={[1.55, .78, 1]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+    <mesh position={[0, 0.008, 0]} scale={[1.55, .78, 1]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+
       <circleGeometry args={[.48, 24]} />
       <meshBasicMaterial color="#2a1a22" transparent opacity={.42} depthWrite={false} depthTest={false} />
     </mesh>
-    <group ref={fallbackBody} position={[0, 0.24, -.08]}>
+    <group ref={fallbackBody} position={[0, 0.00, -.08]}>
      <mesh position={[0, -.08, 0]} castShadow>
   <cylinderGeometry args={[.48, .62, .76, 10]} />
   <meshStandardMaterial color="#24222c" roughness={.75} />
