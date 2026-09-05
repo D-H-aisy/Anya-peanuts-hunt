@@ -1,17 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type PointerEvent } from 'react';
+
+   import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type PointerEvent } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, KeyboardControls, OrbitControls, Text, useKeyboardControls } from '@react-three/drei';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, RotateCcw, Trophy } from 'lucide-react';
 import * as THREE from 'three';
 
 type Vec2 = { x: number; z: number };
-type Obstacle = { minX: number; maxX: number; minZ: number; maxZ: number };
+type Obstacle = { minX: number; maxX: number; minZ: number; maxZ: number; duckable?: boolean };
 type TouchInput = Vec2;
 type AnyaMood = 'normal' | 'happy' | 'sad' | 'crying';
 
 const FLOOR_LEVEL = 0;
 const FLOOR_THICKNESS = .12;
-const ANYA_SPRITE_FOOT_INSET = (0.0000000000000001) ;
+const ANYA_SPRITE_FOOT_INSET = (28 / 240) * 1.86;
 
 enum Controls {
   forward = 'forward',
@@ -29,7 +30,7 @@ const keyMap = [
   { name: Controls.duck, keys: ['ShiftLeft', 'ShiftRight', 'KeyC'] },
 ];
 
-const peanutSpots: Vec2[] = [
+const initialPeanutSpots: Vec2[] = [
   { x: -11.7, z: -6.7 }, { x: -8.6, z: -7.1 }, { x: -12.5, z: -3.9 },
   { x: -10.6, z: 4.7 }, { x: -7.8, z: 6.4 }, { x: -12.1, z: 7.5 },
   { x: -3.0, z: -7.3 }, { x: -1.2, z: -5.4 }, { x: 1.6, z: -7.7 },
@@ -39,6 +40,19 @@ const peanutSpots: Vec2[] = [
   { x: 7.7, z: 7.0 }, { x: 11.6, z: 7.2 }, { x: 4.2, z: 7.6 },
   { x: -2.0, z: 7.7 }, { x: 3.0, z: 4.0 }, { x: 0.4, z: 9.0 },
 ];
+
+function randomPeanutSpot(obstacles: Obstacle[], avoid: Vec2[]): Vec2 {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const x = THREE.MathUtils.randFloat(-12.6, 12.6);
+    const z = THREE.MathUtils.randFloat(-9.0, 9.0);
+    const insideWall = obstacles.some((o) => !o.duckable && x > o.minX - .5 && x < o.maxX + .5 && z > o.minZ - .5 && z < o.maxZ + .5);
+    if (insideWall) continue;
+    const tooClose = avoid.some((spot) => Math.hypot(x - spot.x, z - spot.z) < 1.6);
+    if (tooClose) continue;
+    return { x, z };
+  }
+  return { x: 0, z: 0 };
+}
 
 const roomName = (x: number, z: number) => {
   if (x < -5 && z < 0) return 'Loid & Yor’s room';
@@ -121,7 +135,7 @@ function Sofa({ position, obstacles }: { position: [number, number, number]; obs
 }
 
 function Kitchen({ obstacles }: { obstacles: Obstacle[] }) {
-  useMemo(() => { obstacles.push({ minX: 7, maxX: 10.7, minZ: -6.2, maxZ: -4.3 }); obstacles.push({ minX: 5.4, maxX: 8.4, minZ: -1.5, maxZ: -.4 }); return null; }, [obstacles]);
+  useMemo(() => { obstacles.push({ minX: 7, maxX: 10.7, minZ: -6.2, maxZ: -4.3 }); obstacles.push({ minX: 5.4, maxX: 8.4, minZ: -1.5, maxZ: -.4, duckable: true }); return null; }, [obstacles]);
   return <group>
     <mesh position={[8.8, 1.25, -9]} castShadow><boxGeometry args={[9.5, 2.5, .55]} /><meshStandardMaterial color="#805a55" /></mesh>
     <mesh position={[8.8, 2.55, -9]}><boxGeometry args={[9.5, .08, .58]} /><meshStandardMaterial color="#d9c5a1" /></mesh>
@@ -135,7 +149,7 @@ function Kitchen({ obstacles }: { obstacles: Obstacle[] }) {
 }
 
 function LivingRoom({ obstacles }: { obstacles: Obstacle[] }) {
-  useMemo(() => { obstacles.push({ minX: 6.7, maxX: 10.8, minZ: 4.3, maxZ: 5.7 }); obstacles.push({ minX: 7.3, maxX: 10.2, minZ: 6.2, maxZ: 7.5 }); return null; }, [obstacles]);
+  useMemo(() => { obstacles.push({ minX: 6.7, maxX: 10.8, minZ: 4.3, maxZ: 5.7 }); obstacles.push({ minX: 7.3, maxX: 10.2, minZ: 6.2, maxZ: 7.5, duckable: true }); return null; }, [obstacles]);
   return <group>
     <Sofa position={[8.8, 0, 5]} obstacles={obstacles} />
     <mesh position={[8.8, .35, 7]} castShadow><boxGeometry args={[3.5, .7, 1.1]} /><meshStandardMaterial color="#8c6c57" /></mesh>
@@ -155,14 +169,14 @@ function HouseFurniture({ obstacles }: { obstacles: Obstacle[] }) {
   </>;
 }
 
-function Peanut({ id, spot, collected }: { id: number; spot: Vec2; collected: boolean }) {
+function Peanut({ id, spot }: { id: number; spot: Vec2 }) {
   const ref = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
-    if (!ref.current || collected) return;
+    if (!ref.current) return;
     ref.current.rotation.y += .025;
     ref.current.position.y = .42 + Math.sin(clock.elapsedTime * 2.2 + id) * .09;
   });
-  return <group ref={ref} position={[spot.x, .42, spot.z]} rotation={[0, 0, .34]} visible={!collected}>
+  return <group ref={ref} position={[spot.x, .42, spot.z]} rotation={[0, 0, .34]}>
     <mesh position={[0, .19, 0]} scale={[.78, 1.08, .82]} castShadow>
       <sphereGeometry args={[.27, 20, 16]} />
       <meshStandardMaterial color="#c98936" roughness={.8} metalness={0} />
@@ -319,7 +333,7 @@ function AnyaCharacter({ positionRef, crawling, mood }: { positionRef: MutableRe
   </group>;
 }
 
-function Player({ obstacles, crawling, touch, collected, positionRef, onPosition, onCollect }: { obstacles: Obstacle[]; crawling: boolean; touch: TouchInput; collected: number[]; positionRef: MutableRefObject<THREE.Vector3>; onPosition: (v: THREE.Vector3) => void; onCollect: (id: number) => void }) {
+function Player({ obstacles, crawling, touch, spots, positionRef, onPosition, onEat }: { obstacles: Obstacle[]; crawling: boolean; touch: TouchInput; spots: Vec2[]; positionRef: MutableRefObject<THREE.Vector3>; onPosition: (v: THREE.Vector3) => void; onEat: (id: number) => void }) {
   const [, getState] = useKeyboardControls<Controls>();
   const { camera } = useThree();
   const last = useRef(new THREE.Vector3(0, 0, 0));
@@ -340,15 +354,13 @@ function Player({ obstacles, crawling, touch, collected, positionRef, onPosition
       const next = last.current.clone().addScaledVector(dir, speed * Math.min(delta, .04));
       next.x = THREE.MathUtils.clamp(next.x, -13.2, 13.2); next.z = THREE.MathUtils.clamp(next.z, -9.45, 9.45);
       const r = .42;
-      const blocked = obstacles.some((o) => next.x + r > o.minX && next.x - r < o.maxX && next.z + r > o.minZ && next.z - r < o.maxZ);
+      const blocked = obstacles.some((o) => (!crawling || !o.duckable) && next.x + r > o.minX && next.x - r < o.maxX && next.z + r > o.minZ && next.z - r < o.maxZ);
       if (!blocked) { last.current.copy(next); face.current.lerp(dir, .35); }
     }
-    const pickupId = peanutSpots.findIndex((spot, id) =>
-      !collected.includes(id) && Math.hypot(last.current.x - spot.x, last.current.z - spot.z) < .9
-    );
+    const pickupId = spots.findIndex((spot) => Math.hypot(last.current.x - spot.x, last.current.z - spot.z) < .9);
     if (pickupId >= 0 && pickupId !== lastPickup.current) {
       lastPickup.current = pickupId;
-      onCollect(pickupId);
+      onEat(pickupId);
     } else if (pickupId < 0) {
       lastPickup.current = null;
     }
@@ -358,18 +370,27 @@ function Player({ obstacles, crawling, touch, collected, positionRef, onPosition
   return null;
 }
 
-function GameWorld({ collected, onCollect, touch, touchDuck, mood, onPosition }: { collected: number[]; onCollect: (id: number) => void; touch: TouchInput; touchDuck: boolean; mood: AnyaMood; onPosition: (v: THREE.Vector3) => void }) {
+function GameWorld({ onEat, touch, touchDuck, mood, onPosition }: { onEat: () => void; touch: TouchInput; touchDuck: boolean; mood: AnyaMood; onPosition: (v: THREE.Vector3) => void }) {
   const obstacles = useMemo<Obstacle[]>(() => [], []);
+  const [spots, setSpots] = useState<Vec2[]>(initialPeanutSpots);
   const positionRef = useRef(new THREE.Vector3(0, 0, 0));
   const keysDuck = useKeyboardControls<Controls>(state => state.duck);
   const crawling = touchDuck || keysDuck;
+  const handleEat = useCallback((id: number) => {
+    setSpots((prev) => {
+      const next = [...prev];
+      next[id] = randomPeanutSpot(obstacles, prev.filter((_, i) => i !== id));
+      return next;
+    });
+    onEat();
+  }, [obstacles, onEat]);
   return <>
     <ambientLight intensity={1.9} color="#fff1df" />
     <directionalLight position={[-8, 15, 10]} intensity={2.7} color="#fff2d5" castShadow shadow-mapSize={[1024, 1024]} />
     <directionalLight position={[12, 7, -8]} intensity={1.1} color="#efb1b9" />
     <House obstacles={obstacles} /><HouseFurniture obstacles={obstacles} />
-    {peanutSpots.map((spot, i) => <Peanut key={i} id={i} spot={spot} collected={collected.includes(i)} />)}
-    <Player obstacles={obstacles} crawling={crawling} touch={touch} collected={collected} positionRef={positionRef} onPosition={onPosition} onCollect={onCollect} />
+    {spots.map((spot, i) => <Peanut key={i} id={i} spot={spot} />)}
+    <Player obstacles={obstacles} crawling={crawling} touch={touch} spots={spots} positionRef={positionRef} onPosition={onPosition} onEat={handleEat} />
     <AnyaCharacter positionRef={positionRef} crawling={crawling} mood={mood} />
     <OrbitControls makeDefault enablePan={false} minDistance={11} maxDistance={24} minPolarAngle={.6} maxPolarAngle={1.35} target={[0, 0, 0]} />
     <ContactShadows position={[0, 0, 0]} opacity={.26} scale={35} blur={2.4} far={18} />
@@ -419,15 +440,15 @@ function WebGLFallback({ collected, total, mood }: { collected: number; total: n
       <img className="fallback-anya-image" src={svgToDataUri(buildAnyaSvg(mood))} alt="Anya in the Forger home" />
       {[0, 1, 2, 3, 4, 5].map((peanut) => <span className={`fallback-peanut peanut-${peanut}`} key={peanut} aria-hidden="true" />)}
     </div>
-    <div className="fallback-progress"><strong>{collected} / {total}</strong><span>peanuts found</span></div>
+    <div className="fallback-progress"><strong>{collected}</strong><span>peanuts eaten</span></div>
   </div>;
 }
 
 function App() {
-  const [collected, setCollected] = useState<number[]>([]);
+  const [eaten, setEaten] = useState(0);
   const [touch, setTouch] = useState<TouchInput>({ x: 0, z: 0 });
   const [touchDuck, setTouchDuck] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [toast, setToast] = useState('Find every peanut in the Forger home');
   const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3());
   const [startedAt, setStartedAt] = useState(() => Date.now());
@@ -437,7 +458,6 @@ function App() {
   const [gameKey, setGameKey] = useState(0);
   const lastUiPosition = useRef(new THREE.Vector3());
   const supportsWebGL = useMemo(() => detectWebGL(), []);
-  const total = peanutSpots.length;
   const wakuAudio = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     const audio = new Audio(`${import.meta.env.BASE_URL}anya-waku-waku.mp3`);
@@ -470,15 +490,15 @@ function App() {
     audio.currentTime = 0;
     void audio.play().catch(() => undefined);
   }, []);
-  const onCollect = useCallback((id: number) => {
+  const onEat = useCallback(() => {
     const now = Date.now();
-    setCollected((prev) => prev.includes(id) ? prev : [...prev, id]);
+    setEaten((prev) => prev + 1);
     setLastPickupAt(now);
     setHappyUntil(now + 1600);
     speakPeanutReaction();
-    setToast(collected.length + 1 === total ? 'All peanuts found. Time to score.' : 'Peanut secured');
+    setToast('Peanut secured');
     window.setTimeout(() => setToast(''), 1300);
-  }, [collected.length, speakPeanutReaction, total]);
+  }, [speakPeanutReaction]);
   const onPosition = useCallback((v: THREE.Vector3) => {
     if (v.distanceTo(lastUiPosition.current) > .08) {
       lastUiPosition.current.copy(v);
@@ -491,9 +511,9 @@ function App() {
   }, [startedAt]);
   const restart = () => {
     const now = Date.now();
-    setCollected([]); setFinished(false); setTouch({ x: 0, z: 0 }); setTouchDuck(false); setStartedAt(now); setLastPickupAt(now); setHappyUntil(0); setElapsed(0); setGameKey((key) => key + 1); setToast('New run started');
+    setEaten(0); setStatsOpen(false); setTouch({ x: 0, z: 0 }); setTouchDuck(false); setStartedAt(now); setLastPickupAt(now); setHappyUntil(0); setElapsed(0); setGameKey((key) => key + 1); setToast('New run started');
   };
-  const score = collected.length * 100 + Math.max(0, 500 - elapsed * 3);
+  const score = eaten * 100 + Math.max(0, 500 - elapsed * 3);
   const currentRoom = roomName(playerPosition.x, playerPosition.z);
   const now = Date.now();
   const pickupAge = now - lastPickupAt;
@@ -503,8 +523,8 @@ function App() {
       {supportsWebGL ? <Canvas className="scene-canvas" shadows camera={{ position: [16, 13, 17], fov: 43 }} gl={{ antialias: true }} dpr={[1, 1.6]}>
           <color attach="background" args={['#d8c4c0']} />
           <fog attach="fog" args={['#d8c4c0', 20, 46]} />
-          <GameWorld key={gameKey} collected={collected} onCollect={onCollect} touch={touch} touchDuck={touchDuck} mood={mood} onPosition={onPosition} />
-        </Canvas> : <WebGLFallback collected={collected.length} total={total} mood={mood} />}
+          <GameWorld key={gameKey} onEat={onEat} touch={touch} touchDuck={touchDuck} mood={mood} onPosition={onPosition} />
+        </Canvas> : <WebGLFallback collected={eaten} total={eaten} mood={mood} />}
       <div className="noise" />
       <header className="topbar">
         <div className="brand-lockup">
@@ -512,8 +532,8 @@ function App() {
           <div><p className="brand-name">Peanut Hunt</p><p className="brand-sub">A very secret family mission</p></div>
         </div>
         <div className="top-actions">
-          <div className="hud-pill" aria-label={`${collected.length} of ${total} peanuts found`}><Trophy size={15} /><strong>{String(collected.length).padStart(2, '0')} / {total}</strong><span>found</span></div>
-          <button className="finish-button" disabled={collected.length !== total} onClick={() => setFinished(true)}>{collected.length === total ? 'Score run' : 'Find them all'}</button>
+          <div className="hud-pill" aria-label={`${eaten} peanuts eaten`}><Trophy size={15} /><strong>{String(eaten).padStart(2, '0')}</strong><span>eaten</span></div>
+          <button className="finish-button" onClick={() => setStatsOpen(true)}>Stats</button>
         </div>
       </header>
       {toast && <div className="toast" role="status">{toast}</div>}
@@ -527,14 +547,15 @@ function App() {
       </div>
       <DPad onMove={setTouch} />
       <button className={`duck-button ${touchDuck ? 'active' : ''}`} onClick={() => setTouchDuck((value) => !value)} aria-pressed={touchDuck}>{touchDuck ? 'CRAWL' : 'DUCK'}</button>
-      {finished && <div className="score-backdrop" role="dialog" aria-modal="true">
+      {statsOpen && <div className="score-backdrop" role="dialog" aria-modal="true">
         <section className="score-card">
-          <p className="score-kicker">Mission complete</p>
-          <h1>Waku waku,<br />that was a feast.</h1>
-          <p>Every peanut is safely accounted for in the family home.</p>
+          <p className="score-kicker">Current run</p>
+          <h1>Waku waku,<br />keep hunting.</h1>
+          <p>Peanuts respawn around the house — there's always another one somewhere.</p>
           <div className="score-number">{score}<small>points</small></div>
-          <div className="score-detail"><strong>{elapsed}s</strong><span>run time</span><span>·</span><strong>{total} / {total}</strong><span>peanuts</span></div>
-          <button className="restart-button" onClick={restart}><RotateCcw size={15} style={{ verticalAlign: 'middle', marginRight: 7 }} />Hunt again</button>
+          <div className="score-detail"><strong>{elapsed}s</strong><span>run time</span><span>·</span><strong>{eaten}</strong><span>peanuts eaten</span></div>
+          <button className="restart-button" onClick={() => setStatsOpen(false)}>Keep hunting</button>
+          <button className="restart-button" onClick={restart}><RotateCcw size={15} style={{ verticalAlign: 'middle', marginRight: 7 }} />Start over</button>
         </section>
       </div>}
     </main>
