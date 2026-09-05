@@ -315,7 +315,7 @@ function AnyaCharacter({ positionRef, crawling, mood }: { positionRef: MutableRe
       <circleGeometry args={[.48, 24]} />
       <meshBasicMaterial color="#2a1a22" transparent opacity={.42} depthWrite={false} depthTest={false} />
     </mesh>
-    <group ref={fallbackBody} position={[0, 1.05, -.08]}>
+    <group ref={fallbackBody} position={[0, 0.8 , -.08]}>
      <mesh position={[0, -.08, 0]} castShadow>
   <cylinderGeometry args={[.48, .62, .76, 10]} />
   <meshStandardMaterial color="#24222c" roughness={.75} />
