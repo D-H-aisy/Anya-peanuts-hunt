@@ -316,7 +316,51 @@ function AnyaCharacter({ positionRef, crawling, mood }: { positionRef: MutableRe
       <meshBasicMaterial color="#2a1a22" transparent opacity={.42} depthWrite={false} depthTest={false} />
     </mesh>
     <group ref={fallbackBody} position={[0, 1.05, -.08]}>
-      <mesh position={[0, -.08, 0]} castShadow><cylinderGeometry args={[.48, .62, .76, 10]} /><meshStandardMaterial color="#24222c" roughness={.75} /></mesh>
+     <mesh position={[0, -.08, 0]} castShadow>
+  <cylinderGeometry args={[.48, .62, .76, 10]} />
+  <meshStandardMaterial color="#24222c" roughness={.75} />
+</mesh>
+
+<mesh position={[0, -.47, 0]}>
+  <torusGeometry args={[.55, .045, 7, 18]} />
+  <meshStandardMaterial color="#e8c36d" />
+</mesh>
+
+<mesh position={[-.22, -.74, 0]} castShadow>
+  <capsuleGeometry args={[.12, .62, 6, 10]} />
+  <meshStandardMaterial color="#fff0e1" />
+</mesh>
+
+<mesh position={[.22, -.74, 0]} castShadow>
+  <capsuleGeometry args={[.12, .62, 6, 10]} />
+  <meshStandardMaterial color="#fff0e1" />
+</mesh>
+
+<mesh position={[-.22, -1.13, .1]} scale={[1.05, .5, 1.55]} castShadow>
+  <sphereGeometry args={[.2, 14, 10]} />
+  <meshStandardMaterial color="#28252e" />
+</mesh>
+
+<mesh position={[.22, -1.13, .1]} scale={[1.05, .5, 1.55]} castShadow>
+  <sphereGeometry args={[.2, 14, 10]} />
+  <meshStandardMaterial color="#28252e" />
+</mesh>
+
+<mesh position={[0, .76, .04]} castShadow>
+  <sphereGeometry args={[.62, 20, 14]} />
+  <meshStandardMaterial color="#ffe9da" roughness={.8} />
+</mesh>
+
+<mesh position={[0, 1.02, .08]} castShadow>
+  <sphereGeometry args={[.68, 20, 13]} />
+  <meshStandardMaterial color="#ee9daf" roughness={.72} />
+</mesh>
+
+<mesh position={[-.44, 1.02, .1]} rotation={[0, 0, -.18]} castShadow>
+  <coneGeometry args={[.2, .55, 3]} />
+  {/* add material here if needed */}
+</mesh>
+
       <mesh position={[0, -.47, 0]}><torusGeometry args={[.55, .045, 7, 18]} /><meshStandardMaterial color="#e8c36d" /></mesh>
       <mesh position={[-.22, -.74, 0]} castShadow><capsuleGeometry args={[.12, .62, 6, 10]} /><meshStandardMaterial color="#fff0e1" /></mesh>
       <mesh position={[.22, -.74, 0]} castShadow><capsuleGeometry args={[.12, .62, 6, 10]} /><meshStandardMaterial color="#fff0e1" /></mesh>
